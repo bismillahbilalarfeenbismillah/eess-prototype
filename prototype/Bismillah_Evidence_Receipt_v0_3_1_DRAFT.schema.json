@@ -1,0 +1,819 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/bismillah/eess/claim-receipt/0.3.1-draft",
+  "title": "Bismillah EESS Claim & Evidence Receipt v0.3.1 -- NON-CANONICAL DESIGN DRAFT",
+  "description": "Revision of v0.3 addressing G4-R1 through G4-R8 from GPT-6 Gate 4 audit. Adds evaluation_record for authenticated evaluator assessments. Fixes NOT_APPLICABLE authorization path. Binds evaluations to immutable claim revisions via content hash. Not approved or claimed as a functioning EESS API.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "claim_id",
+    "claim",
+    "claim_type",
+    "tier",
+    "status",
+    "source_evidence",
+    "evidence_independence",
+    "method",
+    "allowed_action",
+    "review",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.3.1-draft"
+    },
+    "claim_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+    "claim": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claim_content_hash": {
+      "type": ["string", "null"],
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "G4-R5: SHA-256 of the claim text at the current revision. Used to bind evaluation records to exact claim content."
+    },
+    "claim_type": {
+      "enum": [
+        "observation",
+        "computation",
+        "inference",
+        "forecast",
+        "ethical",
+        "theological"
+      ]
+    },
+    "tier": {
+      "enum": ["Tier 1", "Tier 2", "Tier 3"]
+    },
+    "status": {
+      "enum": [
+        "VERIFIED",
+        "PROVISIONAL",
+        "UNKNOWN",
+        "CONTRADICTED",
+        "WITHDRAWN"
+      ]
+    },
+    "source_evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "description": "An empty array is valid for UNKNOWN/PROVISIONAL. VERIFIED requires at least one item with independence=external AND verification_state in [observed, reproduced]. Self-produced evidence is recorded as diagnostic data but carries no weight toward independent certification."
+    },
+    "counterevidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      },
+      "default": []
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "evidence_independence": {
+      "enum": [
+        "external",
+        "correlated",
+        "self_produced",
+        "mixed",
+        "unknown"
+      ],
+      "description": "CR-03: This field is a summary declaration. It is NOT proof of independence. The independence_provenance object provides the evidence basis. A receipt with evidence_independence=external but no supporting independence_provenance is valid JSON but fails normative verification."
+    },
+    "independence_provenance": {
+      "$ref": "#/$defs/independence_provenance",
+      "description": "CR-03: Evidence-backed independence assessment. Required for normative verification when evidence_independence is external."
+    },
+    "dependency_edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dependency"
+      },
+      "default": []
+    },
+    "method": {
+      "$ref": "#/$defs/method"
+    },
+    "uncertainty": {
+      "type": "string",
+      "default": ""
+    },
+    "selection_denominator": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "default": null
+    },
+    "competing_hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "predeclared_falsifier": {
+      "type": "string"
+    },
+    "allowed_action": {
+      "enum": [
+        "no_action",
+        "read_only_review",
+        "bounded_effect"
+      ],
+      "description": "CR-02: This is an authorization decision, separate from verification status. A claim may be VERIFIED but have allowed_action=no_action. A claim may be PROVISIONAL but have allowed_action=read_only_review. Authorization does not imply truth; truth does not imply authorization."
+    },
+    "effect_authorization": {
+      "$ref": "#/$defs/authorization"
+    },
+    "review": {
+      "$ref": "#/$defs/review"
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "structural_blind_spots": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "A7: Properties the producing instrument structurally cannot verify in its own output. This list is itself incomplete (non-enumerability is conjectured, not proven)."
+    },
+    "supersedes_claim_id": {
+      "type": ["string", "null"]
+    },
+    "related_habl_finding_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "shahid_report_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "corpus_release_id": {
+          "type": "string"
+        },
+        "canonical_source_registry_id": {
+          "type": "string"
+        },
+        "source_manifest_signed": {
+          "type": "boolean"
+        },
+        "trust_anchor_id": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "publisher_attestation": {
+      "type": "string",
+      "description": "Publisher-provided assertion, NOT an independent external verification. Carries zero weight toward independent certification per A6."
+    },
+    "revision_history": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/revision_entry"
+      },
+      "description": "CR-04: Immutable, append-only revision history. Each entry is a typed, directional revision of this claim. Conflicting corrections remain visible. Latest timestamp does not automatically win."
+    },
+    "evaluation_records": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evaluation_record"
+      },
+      "default": [],
+      "description": "G4-R1: Independently authenticated evaluator assessment records. These are embedded COPIES for convenience. The authoritative versions are in the frozen evidence snapshot, identified by evaluation_id and verified by record_content_hash."
+    },
+    "demonstration_only": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "required": [
+        "evidence_id",
+        "source_id",
+        "locator",
+        "kind",
+        "independence",
+        "verification_state"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "source_quote",
+            "file_bytes",
+            "recomputed_measurement",
+            "reproduction",
+            "witness_attestation",
+            "publisher_claim",
+            "counterexample"
+          ]
+        },
+        "independence": {
+          "enum": [
+            "external",
+            "correlated",
+            "self_produced",
+            "unknown"
+          ],
+          "description": "CR-03: Declaration of independence level. For VERIFIED claims, at least one evidence item must have independence=external. This is a declaration that must be backed by independence_provenance at the receipt level."
+        },
+        "verification_state": {
+          "enum": [
+            "observed",
+            "reproduced",
+            "claimed",
+            "not_examined",
+            "failed"
+          ],
+          "description": "CR-01: For VERIFIED claims, at least one external evidence item must have verification_state in [observed, reproduced]. The value 'claimed' is diagnostic data, not independent certification."
+        },
+        "raw_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "source_version": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "access_policy": {
+          "enum": [
+            "public",
+            "restricted",
+            "private",
+            "unspecified"
+          ]
+        },
+        "publisher_binding": {
+          "$ref": "#/$defs/publisher_binding",
+          "description": "Publisher's proposed claim-evidence binding. Diagnostic context only."
+        },
+        "evaluator_binding": {
+          "$ref": "#/$defs/evaluator_binding",
+          "description": "G4-R1: Embedded COPY of the evaluator's assessment. Diagnostic context only. The authoritative record is the evaluation_record referenced by evaluation_record_id."
+        },
+        "evaluation_record_id": {
+          "type": ["string", "null"],
+          "description": "G4-R1: References the authoritative evaluation_record in the frozen evidence snapshot. The embedded evaluator_binding is a convenience copy; this ID is the trust anchor."
+        }
+      },
+      "additionalProperties": false
+    },
+    "publisher_binding": {
+      "type": "object",
+      "properties": {
+        "tested_property": {
+          "type": "string"
+        },
+        "claim_relevance": {
+          "enum": ["direct_test", "supporting", "contextual", "unrelated"]
+        },
+        "proposed_by": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evaluator_binding": {
+      "type": "object",
+      "description": "G4-R1: This is an embedded COPY for diagnostic purposes. The authoritative assessment is the evaluation_record identified by evidence.evaluation_record_id, verified against the frozen evidence snapshot.",
+      "properties": {
+        "claim_id": {
+          "type": "string"
+        },
+        "claim_revision_id": {
+          "type": "string",
+          "description": "G4-R5: Required in the authoritative evaluation_record. Nullable here as this is a diagnostic copy."
+        },
+        "claim_content_hash": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "G4-R5: SHA-256 of the claim text at the evaluated revision. Ensures evaluation is bound to exact content."
+        },
+        "tested_property": {
+          "type": "string"
+        },
+        "method_name": {
+          "type": "string"
+        },
+        "method_version": {
+          "type": "string"
+        },
+        "execution_evidence_id": {
+          "type": ["string", "null"]
+        },
+        "observed_result": {
+          "type": "string"
+        },
+        "claim_relevance": {
+          "enum": ["direct_test", "supporting", "contextual", "unrelated"]
+        },
+        "assessed_by": {
+          "type": "string"
+        },
+        "assessment_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evaluation_record": {
+      "type": "object",
+      "description": "G4-R1: Independently authenticated evaluator assessment. The authoritative version lives in the frozen evidence snapshot. This embedded copy is verified by matching record_content_hash.",
+      "required": [
+        "evaluation_id",
+        "claim_id",
+        "claim_revision_id",
+        "claim_content_hash",
+        "evaluator_lineage_id",
+        "tested_property",
+        "observed_result",
+        "claim_relevance",
+        "assessment_timestamp",
+        "record_content_hash"
+      ],
+      "properties": {
+        "evaluation_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique identifier for this evaluation record. Used to retrieve the authoritative version from the frozen evidence snapshot."
+        },
+        "claim_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim_revision_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "G4-R5: Required. Binds this evaluation to a specific claim revision."
+        },
+        "claim_content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "G4-R5: SHA-256 of the claim text at the evaluated revision. Ensures the evaluation cannot drift to a different claim version."
+        },
+        "evaluator_lineage_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Lineage identifier of the evaluator. Verified against the frozen registry snapshot for independence."
+        },
+        "tested_property": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method_name": {
+          "type": "string"
+        },
+        "method_version": {
+          "type": "string"
+        },
+        "execution_evidence_id": {
+          "type": ["string", "null"]
+        },
+        "observed_result": {
+          "type": "string"
+        },
+        "outcome_type": {
+          "type": "string",
+          "enum": ["PASS", "FAIL", "INDETERMINATE"],
+          "description": "G4E-R3: Typed evaluation outcome."
+        },
+        "claim_relevance": {
+          "enum": ["direct_test", "supporting", "contextual", "unrelated"]
+        },
+        "assessment_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "record_content_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "G4-R1: RFC 8785 JCS canonical hash of this record's content fields (excluding this field itself). Computed by the evaluator. Used to verify the embedded copy matches the authoritative version in the frozen evidence snapshot."
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependency": {
+      "type": "object",
+      "required": ["from_id", "to_id", "relation"],
+      "properties": {
+        "from_id": {
+          "type": "string"
+        },
+        "to_id": {
+          "type": "string"
+        },
+        "relation": {
+          "enum": [
+            "derived_from",
+            "shares_key",
+            "shares_source",
+            "same_evaluator",
+            "independently_reproduced",
+            "inferred_link",
+            "unknown"
+          ]
+        },
+        "witnessed": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "independence_provenance": {
+      "type": "object",
+      "description": "CR-03: Evidence-backed independence assessment. Declarations are not proof. This object records what was checked.",
+      "properties": {
+        "producer_lineage_id": {
+          "type": "string",
+          "description": "Identifier of the producing lineage (the system that generated the artifact under review)."
+        },
+        "evaluator_lineage_id": {
+          "type": "string",
+          "description": "Identifier of the evaluating lineage (the system that produced the evidence)."
+        },
+        "shared_sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Known shared data sources, training sets, or reference materials between producer and evaluator."
+        },
+        "shared_keys": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Known shared cryptographic keys or signing authorities."
+        },
+        "shared_execution_environment": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether producer and evaluator ran in the same execution environment."
+        },
+        "organizational_relationship": {
+          "enum": [
+            "same_organization",
+            "subsidiary",
+            "contractor",
+            "independent",
+            "unknown"
+          ],
+          "description": "Organizational control relationship between producer and evaluator."
+        },
+        "unresolved_dependencies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Dependencies that could not be resolved. Non-empty means independence is not fully established."
+        },
+        "assessment": {
+          "enum": [
+            "independent",
+            "dependent",
+            "partially_independent",
+            "unresolved"
+          ],
+          "description": "The assessed independence level after examining provenance. 'unresolved' means adequate evidence is absent."
+        }
+      },
+      "additionalProperties": false
+    },
+    "method": {
+      "type": "object",
+      "required": ["name", "version", "scope"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "method_sha256": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "execution_evidence_id": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "review": {
+      "type": "object",
+      "required": ["reviewer", "date"],
+      "description": "G4-R2: review.authorization is now OPTIONAL. Authorization is fully governed by effect_authorization. When present, review.authorization is an input to action_authorization only.",
+      "properties": {
+        "reviewer": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "authorization": {
+          "enum": [
+            "not_authorized",
+            "pending",
+            "approved"
+          ],
+          "description": "CR-02: OPTIONAL. Authorization for consequential action. When present, it is an input to action_authorization only. When absent, action_authorization operates on effect_authorization alone."
+        },
+        "independence_note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "revision_entry": {
+      "type": "object",
+      "required": [
+        "revision_id",
+        "relation",
+        "status",
+        "timestamp"
+      ],
+      "properties": {
+        "revision_id": {
+          "type": "string",
+          "description": "Unique identifier for this revision entry."
+        },
+        "relation": {
+          "enum": [
+            "supersedes",
+            "challenges",
+            "retracts",
+            "corroborates",
+            "withdraws",
+            "amends"
+          ],
+          "description": "CR-04: Typed, directional relationship."
+        },
+        "prior_revision_id": {
+          "type": ["string", "null"],
+          "description": "CR-04: The revision this entry relates to. Null for the initial entry."
+        },
+        "status": {
+          "enum": [
+            "VERIFIED",
+            "PROVISIONAL",
+            "UNKNOWN",
+            "CONTRADICTED",
+            "WITHDRAWN"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Evidence items supporting this revision."
+        },
+        "content_hash": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "G4-R5: SHA-256 of the claim text at this revision point. Enables evaluation records to bind to exact content."
+        }
+      },
+      "additionalProperties": false
+    },
+    "authorization": {
+      "type": "object",
+      "required": [
+        "contract_match",
+        "effect_type_allowed",
+        "target_allowed",
+        "witness_healthy",
+        "evidence_current",
+        "approval_record_id"
+      ],
+      "properties": {
+        "contract_match": {
+          "$ref": "#/$defs/gate_value"
+        },
+        "effect_type_allowed": {
+          "$ref": "#/$defs/gate_value"
+        },
+        "target_allowed": {
+          "$ref": "#/$defs/gate_value"
+        },
+        "witness_healthy": {
+          "$ref": "#/$defs/gate_value"
+        },
+        "evidence_current": {
+          "$ref": "#/$defs/gate_value"
+        },
+        "approval_record_id": {
+          "type": ["string", "null"]
+        },
+        "exception_policy": {
+          "type": ["string", "null"],
+          "description": "G4-R2: When any authorization check is NOT_APPLICABLE, this field MUST reference a versioned applicability policy. Free-text alone is not sufficient. UNKNOWN must never silently become TRUE or NOT_APPLICABLE."
+        }
+      },
+      "additionalProperties": false
+    },
+    "gate_value": {
+      "enum": [
+        "TRUE",
+        "FALSE",
+        "UNKNOWN",
+        "NOT_APPLICABLE"
+      ],
+      "description": "G4-R2: Extended from three_value to include NOT_APPLICABLE. NOT_APPLICABLE requires a versioned exception_policy reference."
+    },
+    "approval_record": {
+      "type": "object",
+      "description": "G4-R6: Structure for authenticated human approval records in the frozen policy snapshot.",
+      "required": [
+        "approval_id",
+        "approving_principal",
+        "approved_action",
+        "approved_target",
+        "valid_from",
+        "valid_until",
+        "revocation_status"
+      ],
+      "properties": {
+        "approval_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "approving_principal": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authenticated identity of the approving human authority."
+        },
+        "approved_action": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The specific action type approved."
+        },
+        "approved_target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The specific target the action is approved against."
+        },
+        "valid_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "valid_until": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revocation_status": {
+          "enum": ["active", "revoked"],
+          "description": "G4-R6: Revoked approvals are DENIED regardless of other checks."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "allowed_action": {
+            "const": "bounded_effect"
+          }
+        }
+      },
+      "then": {
+        "required": ["effect_authorization"],
+        "properties": {
+          "effect_authorization": {
+            "description": "G4-R2: Each check must be TRUE or NOT_APPLICABLE (with policy). UNKNOWN and FALSE are rejected.",
+            "properties": {
+              "contract_match": {
+                "enum": ["TRUE", "NOT_APPLICABLE"]
+              },
+              "effect_type_allowed": {
+                "enum": ["TRUE", "NOT_APPLICABLE"]
+              },
+              "target_allowed": {
+                "enum": ["TRUE", "NOT_APPLICABLE"]
+              },
+              "witness_healthy": {
+                "enum": ["TRUE", "NOT_APPLICABLE"]
+              },
+              "evidence_current": {
+                "enum": ["TRUE", "NOT_APPLICABLE"]
+              },
+              "approval_record_id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "allowed_action": {
+            "const": "bounded_effect"
+          },
+          "effect_authorization": {
+            "anyOf": [
+              {"properties": {"contract_match": {"const": "NOT_APPLICABLE"}}},
+              {"properties": {"effect_type_allowed": {"const": "NOT_APPLICABLE"}}},
+              {"properties": {"target_allowed": {"const": "NOT_APPLICABLE"}}},
+              {"properties": {"witness_healthy": {"const": "NOT_APPLICABLE"}}},
+              {"properties": {"evidence_current": {"const": "NOT_APPLICABLE"}}}
+            ]
+          }
+        },
+        "required": ["effect_authorization"]
+      },
+      "then": {
+        "properties": {
+          "effect_authorization": {
+            "required": ["exception_policy"],
+            "properties": {
+              "exception_policy": {
+                "type": "string",
+                "minLength": 1,
+                "description": "G4-R2: Required when any check is NOT_APPLICABLE. Must reference a versioned applicability policy."
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "VERIFIED"
+          }
+        }
+      },
+      "then": {
+        "description": "CR-01: VERIFIED requires at least one source_evidence item with independence=external AND verification_state in [observed, reproduced]. CR-02: review.authorization is NOT examined here.",
+        "properties": {
+          "source_evidence": {
+            "minItems": 1,
+            "contains": {
+              "properties": {
+                "independence": {
+                  "const": "external"
+                },
+                "verification_state": {
+                  "enum": ["observed", "reproduced"]
+                }
+              },
+              "required": ["independence", "verification_state"]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

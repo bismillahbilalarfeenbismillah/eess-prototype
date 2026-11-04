@@ -1,0 +1,433 @@
+{
+  "_bismillah": "Bismillah ir-Rahman ir-Rahim",
+  "_version": "0.3.13",
+  "_description": "Invariant manifest for EESS Non-Authorizing Prototype v0.3.13. Each entry declares one invariant, its falsification condition, and the test classes that exercise it.",
+  "invariants": [
+    {
+      "id": "I-1",
+      "name": "Append-only journal",
+      "tier": 1,
+      "falsification_condition": "An event already committed to the journal is observed to have changed its payload, hash, or position after commit.",
+      "coverage": [
+        "TestJournalLockdown",
+        "TestImmutableEventOwnership",
+        "TestJournalIntegrity",
+        "TestTailDeletionDetection",
+        "TestP5Regressions"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P3"
+    },
+    {
+      "id": "I-2",
+      "name": "Predecessor-linked integrity chain",
+      "tier": 1,
+      "falsification_condition": "A tampered event passes verify_head() without detection (including chain-break detection via prev_hash linkage), or a valid untampered journal fails verify_head().",
+      "coverage": [
+        "TestJournalIntegrity",
+        "TestRobustIntegrityCheck",
+        "TestUniversalIntegrityGuard",
+        "TestTailDeletionDetection",
+        "TestVerifiedSnapshotReducer",
+        "TestVerifiedStatusReaders",
+        "TestP10F03SHA256Grammar",
+        "TestP11F02HashChain"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P3"
+    },
+    {
+      "id": "I-3",
+      "name": "Deterministic reducer",
+      "tier": 1,
+      "falsification_condition": "Two calls to reduce() on the same verified journal snapshot produce different SafetyState values.",
+      "coverage": [
+        "TestReducer",
+        "TestVerifiedSnapshotReducer",
+        "TestEffectiveAttemptOutcome"
+      ],
+      "module": "Bismillah_Decision_Reducer_v0313.py",
+      "first_audit": "P4"
+    },
+    {
+      "id": "I-4",
+      "name": "Atomic dispatch claim",
+      "tier": 1,
+      "falsification_condition": "Two concurrent threads both succeed in committing a J2 for the same decision_id + attempt_id, or a J2 is committed while the reducer reports a non-PENDING state.",
+      "coverage": [
+        "TestDispatchLifecycle",
+        "TestConcurrentDispatch",
+        "TestAtomicReaderSnapshots",
+        "TestP10F01EpochPoisoning"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P4"
+    },
+    {
+      "id": "I-5",
+      "name": "Temporal J11 ordering",
+      "tier": 1,
+      "falsification_condition": "A J11 reconciliation event is accepted when its append_offset is not strictly greater than the latest J4c append_offset for the same attempt.",
+      "coverage": [
+        "TestTemporalJ11Ordering",
+        "TestReconciliationSequence",
+        "TestReconciliationBoundary"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P7"
+    },
+    {
+      "id": "C-01",
+      "name": "Deep-copy ownership boundary",
+      "tier": 1,
+      "falsification_condition": "Mutating an event dict after ingestion changes the stored journal entry, or mutating a returned event dict changes the journal.",
+      "coverage": [
+        "TestImmutableEventOwnership",
+        "TestMockCallRecordsCopied",
+        "TestAtomicReaderSnapshots"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P6"
+    },
+    {
+      "id": "C-02",
+      "name": "Universal integrity guard on typed mutators",
+      "tier": 1,
+      "falsification_condition": "A typed mutator (record_j0 through record_j12) accepts an event and commits it to a journal whose integrity chain is already broken.",
+      "coverage": [
+        "TestUniversalIntegrityGuard",
+        "TestIntegrityBoundOps"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P6"
+    },
+    {
+      "id": "C-03",
+      "name": "Status readers verify integrity or fail closed",
+      "tier": 1,
+      "falsification_condition": "get_attempt_outcome(), has_conflict(), has_j2(), or get_attempts() returns a definitive status on a tampered journal instead of None, True (for has_conflict), False (for has_j2), or empty list.",
+      "coverage": [
+        "TestVerifiedStatusReaders",
+        "TestVerifiedSnapshotReducer",
+        "TestGetEventsUnverifiedReader"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P8"
+    },
+    {
+      "id": "C-04",
+      "name": "Verified snapshot for reducer consumption",
+      "tier": 1,
+      "falsification_condition": "DecisionReducer.reduce() returns a non-QUARANTINED result when fed a journal with a broken integrity chain.",
+      "coverage": [
+        "TestVerifiedSnapshotReducer",
+        "TestReducer"
+      ],
+      "module": "Bismillah_Decision_Reducer_v0313.py",
+      "first_audit": "P7"
+    },
+    {
+      "id": "C-05",
+      "name": "J11 target_transaction_id strict string validation",
+      "tier": 1,
+      "falsification_condition": "record_reconciliation_evidence() accepts a non-string, None, or whitespace-only target_transaction_id without raising ValueError.",
+      "coverage": [
+        "TestJ11TransactionIdValidation",
+        "TestJ11NoneWhitespaceTxId"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P8"
+    },
+    {
+      "id": "C-06",
+      "name": "Validate-then-mutate fencing",
+      "tier": 1,
+      "falsification_condition": "A rejected mock request (empty hash, whitespace key, missing field) advances _seen_epochs, _seen_keys, or _seen_effects, blocking a subsequent valid request that should succeed.",
+      "coverage": [
+        "TestP10F01EpochPoisoning",
+        "TestFencingDedupRetry",
+        "TestMockFencingEpochValidation"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P10"
+    },
+    {
+      "id": "C-07",
+      "name": "Strict integer epoch type",
+      "tier": 1,
+      "falsification_condition": "MockTarget.call() accepts a float (1.0), bool (True), or negative integer as epoch without returning DEFINITIVE_NO_EFFECT.",
+      "coverage": [
+        "TestP10F02StrictEpochType",
+        "TestMockFencingEpochValidation",
+        "TestMockTargetEpochValidation"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P10"
+    },
+    {
+      "id": "C-08",
+      "name": "SHA-256 grammar validation via regex",
+      "tier": 1,
+      "falsification_condition": "A string that is not exactly 64 hex characters passes _validate_sha256(), or a valid 64-hex-char string is rejected.",
+      "coverage": [
+        "TestP10F03SHA256Grammar",
+        "TestRequestHashFormat",
+        "TestEvidenceValidation"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P10"
+    },
+    {
+      "id": "C-09",
+      "name": "Mock input completeness",
+      "tier": 2,
+      "falsification_condition": "MockTarget.call() accepts a direct call with missing decision_id, whitespace-only idempotency_key, whitespace-only request_hash, boolean request_hash, or mismatched target without typed refusal.",
+      "coverage": [
+        "TestP10OpenMockInputHardening",
+        "TestMockTargetEffectIdentity",
+        "TestMockMissingIdempotencyKey",
+        "TestMockWhitespaceEffectId",
+        "TestMockBooleanRequestHash",
+        "TestMockTargetMismatch",
+        "TestMockTargetTypedRefusal",
+        "TestMockDedupEmptyHashBypass"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P8"
+    },
+    {
+      "id": "C-10",
+      "name": "Validate-then-commit event construction",
+      "tier": 1,
+      "falsification_condition": "A typed mutator partially mutates journal state and then raises an exception, leaving the journal in a half-committed state.",
+      "coverage": [
+        "TestValidateThenCommit",
+        "TestP5Regressions"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P5"
+    },
+    {
+      "id": "C-11",
+      "name": "Decision-id format validation",
+      "tier": 2,
+      "falsification_condition": "A typed mutator accepts an empty, whitespace-only, or non-string decision_id without raising ValueError.",
+      "coverage": [
+        "TestDecisionIdValidation"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P6"
+    },
+    {
+      "id": "C-12",
+      "name": "J4 strict outcome types",
+      "tier": 1,
+      "falsification_condition": "record_target_effect_confirmed() or record_no_effect() accepts an evidence_hash or payload that is not a valid string, or accepts a disallowed outcome type.",
+      "coverage": [
+        "TestJ4StrictTypes",
+        "TestEvidenceValidation"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P5"
+    },
+    {
+      "id": "C-13",
+      "name": "Capability enum validation",
+      "tier": 2,
+      "falsification_condition": "An adapter is constructed with a capability value not in VALID_CAPABILITIES, or a journal accepts a J1 with an unrecognized capability string.",
+      "coverage": [
+        "TestCapabilityEnum",
+        "TestScalarEnumValidation"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P5"
+    },
+    {
+      "id": "C-14",
+      "name": "Reconciliation trust boundary",
+      "tier": 2,
+      "falsification_condition": "The test-only reconciliation helper directly authorizes a definitive J4a/J4b without going through the dispatch engine's eligibility check.",
+      "coverage": [
+        "TestReconciliationTrustBoundary",
+        "TestReconciliationBoundary",
+        "TestJ11BeforeJ4cPermitted"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P8"
+    },
+    {
+      "id": "C-15",
+      "name": "J4c blocked after definitive outcome",
+      "tier": 1,
+      "falsification_condition": "record_target_effect_unknown() succeeds on an attempt that already has a definitive J4a or J4b.",
+      "coverage": [
+        "TestJ4cAfterDefinitiveBlocked"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P7"
+    },
+    {
+      "id": "C-16",
+      "name": "Retention validation",
+      "tier": 2,
+      "falsification_condition": "DispatchEngine accepts a dedup_retention_seconds that is NaN, Inf, negative, zero, boolean, or non-numeric without raising ValueError.",
+      "coverage": [
+        "TestRetentionValidation",
+        "TestNanRejection"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P5"
+    },
+    {
+      "id": "C-17",
+      "name": "Adapter retention required for dispatch",
+      "tier": 2,
+      "falsification_condition": "DispatchEngine.dispatch() proceeds to target call without a registered adapter for the decision's target_id.",
+      "coverage": [
+        "TestAdapterRetentionRequired"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P6"
+    },
+    {
+      "id": "C-18",
+      "name": "Query scope correctness",
+      "tier": 1,
+      "falsification_condition": "get_attempts() for decision D returns attempts belonging to a different decision D', or get_attempt_outcome() for (D, ATT) returns the outcome of a different attempt.",
+      "coverage": [
+        "TestQueryScope"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P6"
+    },
+    {
+      "id": "C-19",
+      "name": "Lease ownership binding",
+      "tier": 1,
+      "falsification_condition": "A dispatch proceeds after the lease has expired, or a second dispatch for the same attempt succeeds while an unexpired lease is held.",
+      "coverage": [
+        "TestLeaseOwnership",
+        "TestGlobalAttemptUniqueness"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P4"
+    },
+    {
+      "id": "C-20",
+      "name": "J12 effect binding and deduplication",
+      "tier": 2,
+      "falsification_condition": "A J12 is committed without binding to a prior J2 attempt_id, or a duplicate J12 for the same effect_id is accepted.",
+      "coverage": [
+        "TestJ12EffectBinding",
+        "TestJ12Deduplication"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P5"
+    },
+    {
+      "id": "C-21",
+      "name": "Malformed target response handling",
+      "tier": 2,
+      "falsification_condition": "_parse_target_response() accepts a None, non-tuple, wrong-length tuple, or non-string-field response without raising ValueError.",
+      "coverage": [
+        "TestMalformedTargetResponse"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P5"
+    },
+    {
+      "id": "C-22",
+      "name": "J11 query_result validation",
+      "tier": 2,
+      "falsification_condition": "record_reconciliation_evidence() accepts a non-string or empty query_result without raising ValueError.",
+      "coverage": [
+        "TestJ11QueryResultValidation"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P7"
+    },
+    {
+      "id": "C-23",
+      "name": "Mock request-key dedup binding",
+      "tier": 2,
+      "falsification_condition": "MockTarget dedup replay returns the same tx_id for a request whose effect_id or request_hash differs from the original, without signaling a conflict.",
+      "coverage": [
+        "TestMockDedupBinding",
+        "TestMockTargetHashEnforcement",
+        "TestFencingDedupRetry"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P7"
+    },
+    {
+      "id": "C-24",
+      "name": "Predecessor-linked hash chain",
+      "tier": 1,
+      "falsification_condition": "Rewriting an earlier event payload and recomputing only its hash does not cause verify_head() to return False. Or: event at offset N has prev_hash that does not match the integrity_hash of event at offset N-1.",
+      "coverage": [
+        "TestP11F02HashChain"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P11"
+    },
+    {
+      "id": "C-25",
+      "name": "Fail-closed on J3 integrity failure",
+      "tier": 1,
+      "falsification_condition": "After record_attempt_observed() raises due to journal corruption, target.call() is invoked and target.call_count > 0.",
+      "coverage": [
+        "TestP11F04FailClosedJ3"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P11"
+    },
+    {
+      "id": "C-26",
+      "name": "Post-J3 authorization interlock (snapshot-scoped)",
+      "tier": 1,
+      "falsification_condition": "Authorization state is non-VALID (REVOKED, EXPIRED, or other) at the post-J3 reducer snapshot AND target.call_count > 0. Note: revocation/expiration interleaved AFTER the snapshot and BEFORE target.call() is a known residual TOCTOU race, not covered by this contract.",
+      "coverage": [
+        "TestP11F03RevocationInterlock",
+        "TestP11R2F05ExpirationBlocksPostJ3",
+        "TestP11R2C26LinearizationPolicy"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P11"
+    },
+    {
+      "id": "C-27",
+      "name": "Canonical SHA-256 grammar on all hash fields",
+      "tier": 1,
+      "falsification_condition": "Any hash-valued field in any J-event type accepts a value that does not match re.fullmatch(r\"[0-9a-fA-F]{64}\", value). Includes J4a evidence_hash, J12 competing_evidence_hash, and request_hash.",
+      "coverage": [
+        "TestP11F01J12HashGrammar",
+        "TestP10F03SHA256Grammar"
+      ],
+      "module": "Bismillah_HABL_Event_Store_v0313.py",
+      "first_audit": "P11"
+    },
+    {
+      "id": "C-28",
+      "name": "Positive authorization predicate at post-J3 gate",
+      "tier": 1,
+      "falsification_condition": "Post-J3 gate checks for a specific non-VALID state (e.g. == REVOKED) instead of requiring == VALID. Any non-VALID state that reaches the post-J3 gate without blocking dispatch falsifies this.",
+      "coverage": [
+        "TestP11R2F05ExpirationBlocksPostJ3"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P11-R2"
+    },
+    {
+      "id": "C-29",
+      "name": "Quarantine check at post-J3 gate",
+      "tier": 1,
+      "falsification_condition": "Reducer reports SafetyState.QUARANTINED at the post-J3 gate AND target.call_count > 0.",
+      "coverage": [
+        "TestP11R2F06QuarantineBlocksPostJ3"
+      ],
+      "module": "Bismillah_Dispatch_Engine_v0313.py",
+      "first_audit": "P11-R2"
+    }
+  ],
+  "_close": "Bismillah ir-Rahman ir-Rahim"
+}
